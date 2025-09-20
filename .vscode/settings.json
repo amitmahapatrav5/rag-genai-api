@@ -1,7 +1,11 @@
 {
     "cSpell.words": [
+        "abstractmethod",
         "dotenv",
         "huggingface",
-        "Mahapatra"
+        "Mahapatra",
+        "Pydantic",
+        "Vectorizer",
+        "vectorstores"
     ]
 }

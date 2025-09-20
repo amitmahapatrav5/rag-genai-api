@@ -10,10 +10,15 @@ Is there a way to adapt or extend the loader so that it can work with an in-memo
 ## Question 2
 How to type hint a python file object
 
-
 ## Question 3
 What is the difference among `TextIO`, `BinaryIO` and `IO`
 `from typing import IO, TextIO, BinaryIO`
 
-
 ## Question 4
+Difference between TypeDict and Pydantic
+
+## Question 5
+Difference between `from typing import ProtoType` and `from abc import ABC, abstractmethod`
+
+## Question 6
+What is **Chain of Responsibility** Design Pattern

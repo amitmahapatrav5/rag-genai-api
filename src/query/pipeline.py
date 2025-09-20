@@ -1,4 +1,5 @@
 import os
+from abc import ABC, abstractmethod
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -13,10 +14,10 @@ from langchain_core.output_parsers import StrOutputParser
 load_dotenv()
 
 
-# Get Context
 embedding_model = HuggingFaceEmbeddings(
         model_name=os.environ.get('EMBEDDING_MODEL_REPO_ID')
 )
+
 
 db = Chroma(
     persist_directory=Path(os.environ.get('VECTOR_DB_PERSISTENT_ABSOLUTE_PATH')),
@@ -24,13 +25,13 @@ db = Chroma(
     collection_name=os.environ.get('VECTOR_DB_NAME')
 )
 
+
 retriever = db.as_retriever(
     search_type='similarity',
     k=5
 )
 
 
-# Prepare Prompt Template
 prompt_template = PromptTemplate(
     template="""
         You are a helpful assistant that answers strictly based on the provided context.
@@ -61,10 +62,10 @@ llm = HuggingFaceEndpoint(
 )
 chat_model = ChatHuggingFace(llm=llm)
 
+
 output_parser = StrOutputParser()
 
 
-# Build Pipeline
 prompt_creation_chain = RunnableParallel(
     {
         'context': retriever | RunnableLambda(lambda docs: '\n\n'.join( [ doc.page_content for doc in docs ] )),
@@ -73,5 +74,8 @@ prompt_creation_chain = RunnableParallel(
 )
 
 chain = prompt_creation_chain | prompt_template | chat_model | output_parser
+
+def get_result_from_pipeline(query: str):
+    return chain.invoke(query)
 
 # Created By Amit Mahapatra
