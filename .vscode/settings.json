@@ -2,8 +2,13 @@
     "cSpell.words": [
         "abstractmethod",
         "dotenv",
+        "fastapi",
+        "fdst",
+        "fsrc",
         "huggingface",
+        "langchain",
         "Mahapatra",
+        "pathlib",
         "Pydantic",
         "Vectorizer",
         "vectorstores"

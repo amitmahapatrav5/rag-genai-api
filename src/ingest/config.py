@@ -1,1 +1,13 @@
-# Looking at the file, I want to decide which langchain component to use
+class LoaderSelector:
+    pass
+
+
+class SplitterSelector:
+    pass
+
+
+class VStoreHandler:
+    pass
+
+
+# Created By Amit Mahapatra
