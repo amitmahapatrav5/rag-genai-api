@@ -8,7 +8,7 @@ app = FastAPI(debug=True)
 
 @app.post('/')
 async def ingest(file: UploadFile):
-    add_to_ingest_pipeline(object = file.file, name =file.filename)
+    add_to_ingest_pipeline(object = file.file, name =file.filename, owner='test')
     return {'success': True} 
 
 

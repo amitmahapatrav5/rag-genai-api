@@ -22,7 +22,7 @@ embedding_model = HuggingFaceEmbeddings(
 db = Chroma(
     persist_directory=Path(os.environ.get('VECTOR_DB_PERSISTENT_ABSOLUTE_PATH')),
     embedding_function=embedding_model,
-    collection_name=os.environ.get('VECTOR_DB_NAME')
+    collection_name=os.environ.get('COLLECTION_NAME')
 )
 
 

@@ -17,7 +17,6 @@ class File:
         self.name: str = name
         self._filepath: Path = None
         self._mimetype: str = None
-        self.encoding: str = None
         self._rounded_filesize: int = None
 
     @property
@@ -62,7 +61,7 @@ class Save(Command):
                 self.file.object.seek(0)
                 shutil.copyfileobj(fsrc=self.file.object, fdst=buffer)
             self.file.filepath = data_directory_absolute_path / self.file.name
-            self.file.mimetype, self.file.encoding = mimetypes.guess_type(self.file.filepath)
+            self.file.mimetype = self.file.filepath.suffix
             self.file.filesize = self.file.filepath.stat().st_size
             return True
         except Exception as e:

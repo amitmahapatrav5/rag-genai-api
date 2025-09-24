@@ -1,13 +1,23 @@
 ## Hierarchy
 src:.
+├───__pycache__
+│   └         main.cpython-312.pyc
 ├───ingest
 │   ├         __init__.py
+│   ├───__pycache__
+│   │   ├         __init__.cpython-312.pyc
+│   │   ├         cache.cpython-312.pyc
+│   │   ├         components.cpython-312.pyc
+│   │   ├         config.cpython-312.pyc
+│   │   └         pipeline.cpython-312.pyc
 │   ├         cache.py
 │   ├         components.py
-│   ├         config.py
-│   └         pipeline.py
+│   ├         pipeline.py
+│   └         selector.py
 ├         main.py
 └───query
+    ├───__pycache__
+    │   └         pipeline.cpython-312.pyc
     ├         components.py
     ├         config.py
     ├         pipeline.py
@@ -22,11 +32,13 @@ from ingest.pipeline import add_to_ingest_pipeline
 from query.pipeline import get_result_from_pipeline
 
 
-app = FastAPI()
+app = FastAPI(debug=True)
 
 @app.post('/')
 async def ingest(file: UploadFile):
-    add_to_ingest_pipeline(file.file)
+    add_to_ingest_pipeline(object = file.file, name =file.filename)
+    return {'success': True} 
+
 
 
 @app.delete('/')
@@ -61,63 +73,82 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class TempFile:
-    def __init__(self, file: TextIO | BinaryIO):
-        self.file = file
-        self.name = file.name
-        self.filepath: Path = None
-        self.mimetype = None
-        self.filesize: int = None
+class File:
+    def __init__(self, object: TextIO | BinaryIO, name):
+        self.object = object # this is actually a python file object, I need a better name here
+        self.name: str = name
+        self._filepath: Path = None
+        self._mimetype: str = None
+        self.encoding: str = None
+        self._rounded_filesize: int = None
+
+    @property
+    def filepath(self):
+        return self._filepath
+    
+    @filepath.setter
+    def filepath(self, filepath):
+        self._filepath = filepath
+
+    @property
+    def mimetype(self):
+        return self._mimetype
+    
+    @mimetype.setter
+    def mimetype(self, mimetype):
+        self._mimetype = mimetype
+    
+    @property
+    def filesize(self):
+        return self._rounded_filesize
+    
+    @filesize.setter
+    def filesize(self, filesize):
+        self._rounded_filesize = filesize
 
 
-class FileOperator(ABC):
+class Command(ABC):
     @abstractmethod
-    def run(self) -> bool:
+    def execute(self) -> bool:
         pass
 
 
-class TempFileSaver(FileOperator):
-    def __init__(self, tempfile: TempFile):
-        self.tempfile = tempfile
+class Save(Command):
+    def __init__(self, file: File):
+        self.file = file
 
-    def run(self) -> bool:
+    def execute(self) -> bool:
         data_directory_absolute_path = Path(os.environ.get('DATA_DIRECTORY_ABSOLUTE_PATH'))
         try:
-            with open(data_directory_absolute_path / self.tempfile.name, '+wb') as buffer:
-                shutil.copyfileobj(fsrc=self.tempfile, fdst=buffer)
+            with open(data_directory_absolute_path / self.file.name, 'wb') as buffer:
+                self.file.object.seek(0)
+                shutil.copyfileobj(fsrc=self.file.object, fdst=buffer)
+            self.file.filepath = data_directory_absolute_path / self.file.name
+            self.file.mimetype, self.file.encoding = mimetypes.guess_type(self.file.filepath)
+            self.file.filesize = self.file.filepath.stat().st_size
             return True
         except Exception as e:
+            print(e)
             return False
 
 
-class TempFilePropertySetter(FileOperator):
-    def __init__(self, tempfile: TempFile):
-        self.tempfile = tempfile
+class Remove(Command):
+    def __init__(self, file: File):
+        self.file = file
 
-    def run(self) -> bool:
-        data_directory_absolute_path = Path(os.environ.get('DATA_DIRECTORY_ABSOLUTE_PATH'))
-        self.tempfile.filepath = data_directory_absolute_path / self.tempfile.name
-        self.tempfile.mimetype = mimetypes.guess_file_type(self.tempfile.filepath)
-        self.tempfile.filesize = self.tempfile.filepath.stat().st_size
-
-
-class TempFileRemover(FileOperator):
-    def __init__(self, tempfile: TempFile):
-        self.tempfile = tempfile
-
-    def run(self) -> bool:
+    def execute(self) -> bool:
         try:
-            self.tempfile.filepath.unlink()
+            self.file.filepath.unlink()
             return True
         except Exception as e:
+            print(e)
             return False
 
 
-# What design pattern have I used ?
-# Is that correct based on what I am trying to perform?
-# If yes, what is the next implementation step?
-# If no, what design pattern should I have followed?
-        
+class Commander:
+    def perform(self, command: Command):
+        command.execute()
+
 
 # Created By Amit Mahapatra
 ```
@@ -196,33 +227,16 @@ class VStore(Component):
 # Created By Amit Mahapatra
 ```
 
-**src/ingest/config.py**
-```python
-class LoaderSelector:
-    pass
-
-
-class SplitterSelector:
-    pass
-
-
-class VStoreHandler:
-    pass
-
-
-# Created By Amit Mahapatra
-```
-
 **src/ingest/pipeline.py**
 ```python
 from typing import List, TextIO, BinaryIO
 
 from dotenv import load_dotenv
 
-from ingest.cache import TempFileSaver, TempFilePropertySetter, TempFileRemover
-from ingest.config import LoaderSelector, SplitterSelector, VStoreHandler
+from ingest.cache import Save, Remove, Commander
+from ingest.selector import LoaderSelector, SplitterSelector, VStoreHandler
 from ingest.components import Loader, Splitter, Enricher, VStore
-from ingest.cache import TempFile
+from ingest.cache import File
 from ingest.components import Component, PayloadType
 
 
@@ -248,13 +262,41 @@ class Pipeline:
     pass
 
 
-def add_to_ingest_pipeline(file: TextIO | BinaryIO):
-    try:
-        pipeline = Pipeline()
-        pipeline.run()
-        return True
-    except Exception as e:
-        return False
+def add_to_ingest_pipeline(object: TextIO | BinaryIO, name: str):
+    
+    # Cache Pipeline
+    file = File(object=object, name=name)
+    save = Save(file)
+    remove = Remove(file)
+    commander = Commander()
+    commander.perform(save)
+    
+
+    # Selector Pipeline
+    
+    
+    # Ingestion Pipeline
+    pipeline = Pipeline()
+    pipeline.run()
+    
+    # Uncache Pipeline
+    commander.perform(remove)
+
+# Created By Amit Mahapatra
+```
+
+**src/ingest/selector.py**
+```python
+class LoaderSelector:
+    pass
+
+
+class SplitterSelector:
+    pass
+
+
+class VStoreHandler:
+    pass
 
 
 # Created By Amit Mahapatra

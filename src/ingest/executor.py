@@ -9,7 +9,6 @@ from langchain.text_splitter import TextSplitter
 
 
 class PayloadType(TypedDict):
-    file: TextIO | BinaryIO
     documents: List[Document]
     chunks: List[Document]
 
@@ -20,18 +19,16 @@ class Component(ABC):
         pass
 
 
-class Loader(Component):
+class LoaderExecutor(Component):
     def __init__(self, loader: BaseLoader):
         self.loader = loader
 
     def run(self, payload: PayloadType):
-        file: TextIO | BinaryIO = payload['file']
-        loader = self.loader(file)
-        payload['documents'] = loader.load()
+        payload['documents'] = self.loader.load()
         return payload
 
 
-class Splitter(Component):
+class SplitterExecutor(Component):
     def __init__(self, splitter: Optional[TextSplitter]):
         self.splitter = splitter or RecursiveCharacterTextSplitter(
             separators=['\n\n', '\n', ' ', ''],
@@ -45,8 +42,7 @@ class Splitter(Component):
         return payload
 
 
-class Enricher(Component):
-    # I want this metadata from user only, so has to get it via constructor
+class EnricherExecutor(Component):
     def __init__(self, metadata: Dict[str, str]):
         self.metadata = metadata
     
@@ -57,7 +53,7 @@ class Enricher(Component):
         return payload
 
 
-class VStore(Component):
+class VStoreExecutor(Component):
     def __init__(self, vector_store: VectorStore):
         self.vector_store = vector_store
     
