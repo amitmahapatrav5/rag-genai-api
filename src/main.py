@@ -6,9 +6,10 @@ from query.pipeline import get_result_from_pipeline
 
 app = FastAPI(debug=True)
 
-@app.post('/')
+@app.post('/ingest')
 async def ingest(file: UploadFile):
-    return add_to_ingest_pipeline(object = file.file, name =file.filename, owner='test')
+    status = add_to_ingest_pipeline(object = file.file, name =file.filename, owner='test')
+    return {"status" : status}
     
 
 
@@ -17,6 +18,9 @@ async def remove(name: str):
     pass
 
 
-@app.get('/')
+@app.get('/query')
 async def query(query: str):
     return get_result_from_pipeline(query)
+
+
+# Created By Amit Mahapatra

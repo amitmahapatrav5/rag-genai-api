@@ -64,6 +64,7 @@ def add_to_ingest_pipeline(object: TextIO | BinaryIO, name: str, owner :str):
     
     # Uncache Pipeline
     commander.perform(remove)
+    return True
 
 
 # Created By Amit Mahapatra
