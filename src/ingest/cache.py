@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import mimetypes
 import os
 from pathlib import Path
 from typing import TextIO, BinaryIO

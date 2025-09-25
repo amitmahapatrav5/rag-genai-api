@@ -9,19 +9,18 @@ src:.
 │   │   ├         cache.cpython-312.pyc
 │   │   ├         components.cpython-312.pyc
 │   │   ├         config.cpython-312.pyc
-│   │   └         pipeline.cpython-312.pyc
+│   │   ├         executor.cpython-312.pyc
+│   │   ├         pipeline.cpython-312.pyc
+│   │   └         selector.cpython-312.pyc
 │   ├         cache.py
-│   ├         components.py
+│   ├         executor.py
 │   ├         pipeline.py
 │   └         selector.py
 ├         main.py
 └───query
     ├───__pycache__
     │   └         pipeline.cpython-312.pyc
-    ├         components.py
-    ├         config.py
-    ├         pipeline.py
-    └         util.py
+    └         pipeline.py
 
 ## Code
 **src/main.py**
@@ -36,9 +35,8 @@ app = FastAPI(debug=True)
 
 @app.post('/')
 async def ingest(file: UploadFile):
-    add_to_ingest_pipeline(object = file.file, name =file.filename)
-    return {'success': True} 
-
+    return add_to_ingest_pipeline(object = file.file, name =file.filename, owner='test')
+    
 
 
 @app.delete('/')
@@ -48,7 +46,7 @@ async def remove(name: str):
 
 @app.get('/')
 async def query(query: str):
-    get_result_from_pipeline(query)
+    return get_result_from_pipeline(query)
 ```
 
 **src/ingest/__init__.py**
@@ -61,7 +59,6 @@ async def query(query: str):
 **src/ingest/cache.py**
 ```python
 from abc import ABC, abstractmethod
-import mimetypes
 import os
 from pathlib import Path
 from typing import TextIO, BinaryIO
@@ -79,7 +76,6 @@ class File:
         self.name: str = name
         self._filepath: Path = None
         self._mimetype: str = None
-        self.encoding: str = None
         self._rounded_filesize: int = None
 
     @property
@@ -124,7 +120,7 @@ class Save(Command):
                 self.file.object.seek(0)
                 shutil.copyfileobj(fsrc=self.file.object, fdst=buffer)
             self.file.filepath = data_directory_absolute_path / self.file.name
-            self.file.mimetype, self.file.encoding = mimetypes.guess_type(self.file.filepath)
+            self.file.mimetype = self.file.filepath.suffix
             self.file.filesize = self.file.filepath.stat().st_size
             return True
         except Exception as e:
@@ -153,9 +149,9 @@ class Commander:
 # Created By Amit Mahapatra
 ```
 
-**src/ingest/components.py**
+**src/ingest/executor.py**
 ```python
-from typing import List, Dict, Optional, TextIO, BinaryIO, TypedDict
+from typing import List, Dict, Optional, TypedDict
 from abc import ABC, abstractmethod
 
 from langchain_core.documents import Document
@@ -166,7 +162,6 @@ from langchain.text_splitter import TextSplitter
 
 
 class PayloadType(TypedDict):
-    file: TextIO | BinaryIO
     documents: List[Document]
     chunks: List[Document]
 
@@ -177,18 +172,16 @@ class Component(ABC):
         pass
 
 
-class Loader(Component):
+class LoaderExecutor(Component):
     def __init__(self, loader: BaseLoader):
         self.loader = loader
 
     def run(self, payload: PayloadType):
-        file: TextIO | BinaryIO = payload['file']
-        loader = self.loader(file)
-        payload['documents'] = loader.load()
+        payload['documents'] = self.loader.load()
         return payload
 
 
-class Splitter(Component):
+class SplitterExecutor(Component):
     def __init__(self, splitter: Optional[TextSplitter]):
         self.splitter = splitter or RecursiveCharacterTextSplitter(
             separators=['\n\n', '\n', ' ', ''],
@@ -202,8 +195,7 @@ class Splitter(Component):
         return payload
 
 
-class Enricher(Component):
-    # I want this metadata from user only, so has to get it via constructor
+class EnricherExecutor(Component):
     def __init__(self, metadata: Dict[str, str]):
         self.metadata = metadata
     
@@ -214,7 +206,7 @@ class Enricher(Component):
         return payload
 
 
-class VStore(Component):
+class VStoreExecutor(Component):
     def __init__(self, vector_store: VectorStore):
         self.vector_store = vector_store
     
@@ -229,22 +221,25 @@ class VStore(Component):
 
 **src/ingest/pipeline.py**
 ```python
+import os
 from typing import List, TextIO, BinaryIO
 
 from dotenv import load_dotenv
+from langchain_huggingface import HuggingFaceEmbeddings
 
 from ingest.cache import Save, Remove, Commander
 from ingest.selector import LoaderSelector, SplitterSelector, VStoreHandler
-from ingest.components import Loader, Splitter, Enricher, VStore
+from ingest.executor import LoaderExecutor, SplitterExecutor, EnricherExecutor, VStoreExecutor
 from ingest.cache import File
-from ingest.components import Component, PayloadType
+from ingest.executor import Component, PayloadType
 
 
 load_dotenv()
 
 
 class IngestionCachePipeline:
-    pass
+    def __init__(self, object, name):
+        self.file = File(object=object, name=name)
 
 class IngestionConfigurationPipeline:
     pass
@@ -253,7 +248,7 @@ class IngestionComponentPipeline:
     def __init__(self, components: List[Component]):
         self.components = components
     
-    def run(self, payload: PayloadType):
+    def run(self, payload: PayloadType = {}):
         for component in self.components:
             payload = component.run(payload)
         return payload
@@ -262,8 +257,7 @@ class Pipeline:
     pass
 
 
-def add_to_ingest_pipeline(object: TextIO | BinaryIO, name: str):
-    
+def add_to_ingest_pipeline(object: TextIO | BinaryIO, name: str, owner :str):
     # Cache Pipeline
     file = File(object=object, name=name)
     save = Save(file)
@@ -273,49 +267,220 @@ def add_to_ingest_pipeline(object: TextIO | BinaryIO, name: str):
     
 
     # Selector Pipeline
-    
+    embedding_model = HuggingFaceEmbeddings(
+            model_name=os.environ.get('EMBEDDING_MODEL_REPO_ID')
+    )    
+    selected_loader = LoaderSelector(file).select()
+    selected_splitter = SplitterSelector(file).select()
+    vector_store = VStoreHandler(embedding_model=embedding_model).select()
     
     # Ingestion Pipeline
-    pipeline = Pipeline()
-    pipeline.run()
+    ingestion_pipeline = IngestionComponentPipeline(
+        components = [
+            LoaderExecutor(selected_loader),
+            SplitterExecutor(selected_splitter),
+            EnricherExecutor(metadata={'owner': owner}),
+            VStoreExecutor(vector_store)
+        ]
+    )
+    ingestion_pipeline.run()
     
     # Uncache Pipeline
     commander.perform(remove)
+
 
 # Created By Amit Mahapatra
 ```
 
 **src/ingest/selector.py**
 ```python
-class LoaderSelector:
-    pass
+import os
 
+from langchain_core.document_loaders import BaseLoader
+from langchain_community.document_loaders import (
+    TextLoader,
+    UnstructuredMarkdownLoader,
+    PyMuPDFLoader,
+    UnstructuredWordDocumentLoader,
+    UnstructuredPowerPointLoader,
+    CSVLoader,
+    UnstructuredExcelLoader
+)
+from langchain.text_splitter import (
+    RecursiveCharacterTextSplitter,
+    CharacterTextSplitter,
+    TokenTextSplitter,
+    NLTKTextSplitter,
+    SpacyTextSplitter,
+    MarkdownHeaderTextSplitter,
+    MarkdownTextSplitter
+)
+
+from langchain_chroma import Chroma
+from dotenv import load_dotenv
+
+from ingest.cache import File
+
+
+load_dotenv()
+
+
+class LoaderSelector:
+    def __init__(self, file: File):
+        self.file = file
+    
+    def select(self) -> BaseLoader:
+        if self.file.mimetype == '.txt':
+            return TextLoader(file_path=self.file.filepath)
+        elif self.file.mimetype == '.md':
+            return UnstructuredMarkdownLoader(file_path=self.file.filepath)
+        elif self.file.mimetype == '.pdf':
+            return PyMuPDFLoader(file_path=self.file.filepath)
+        elif self.file.mimetype == '.docx' or self.file.mimetype == '.docx':
+            return UnstructuredWordDocumentLoader(file_path=self.file.filepath)
+        elif self.file.mimetype == '.ppt' or self.file.mimetype == '.pptx':
+            return UnstructuredPowerPointLoader(file_path=self.file.filepath)
+        elif self.file.mimetype == '.csv':
+            return CSVLoader(file_path=self.file.filepath)
+        elif self.file.mimetype == '.xls' or self.file.mimetype == '.xlsx':
+            return UnstructuredExcelLoader(file_path=self.file.filepath)
 
 class SplitterSelector:
-    pass
-
+    def __init__(self, file: File, chunk_size: int = 1000, chunk_overlap: int = 200):
+        self.file = file
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
+    
+    def select(self, splitter_type: str = "default"):
+        if splitter_type == "default":
+            return self._get_default_splitter()
+        
+        # Specific splitter types
+        splitter_map = {
+            "recursive": self._get_recursive_splitter,
+            "character": self._get_character_splitter,
+            "token": self._get_token_splitter,
+            "nltk": self._get_nltk_splitter,
+            "spacy": self._get_spacy_splitter,
+            "markdown_header": self._get_markdown_header_splitter,
+            "markdown": self._get_markdown_splitter
+        }
+        
+        if splitter_type in splitter_map:
+            return splitter_map[splitter_type]()
+        else:
+            raise ValueError(f"Unknown splitter type: {splitter_type}")
+    
+    def _get_default_splitter(self):
+        """Get the recommended default splitter for each file type"""
+        if self.file.mimetype == '.txt':
+            return self._get_recursive_splitter()
+        elif self.file.mimetype == '.md':
+            # return self._get_markdown_header_splitter()
+            return self._get_markdown_splitter()
+        elif self.file.mimetype in ['.pdf', '.docx', '.doc']:
+            return self._get_recursive_splitter()
+        elif self.file.mimetype in ['.ppt', '.pptx']:
+            return self._get_recursive_splitter()
+        elif self.file.mimetype in ['.csv', '.xlsx', '.xls']:
+            # For structured data, typically no splitting needed
+            # But return a basic splitter in case text fields need splitting
+            return self._get_character_splitter()
+        else:
+            # Default fallback
+            return self._get_recursive_splitter()
+    
+    def _get_recursive_splitter(self):
+        """Most versatile splitter - tries paragraphs, then sentences, then characters"""
+        return RecursiveCharacterTextSplitter(
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap,
+            length_function=len,
+            separators=["\n\n", "\n", " ", ""]
+        )
+    
+    def _get_character_splitter(self):
+        """Basic character-based splitting"""
+        return CharacterTextSplitter(
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap,
+            separator="\n"
+        )
+    
+    def _get_token_splitter(self):
+        """Token-aware splitting (good for LLM context limits)"""
+        return TokenTextSplitter(
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap
+        )
+    
+    def _get_nltk_splitter(self):
+        """NLTK-based sentence-aware splitting"""
+        return NLTKTextSplitter(
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap
+        )
+    
+    def _get_spacy_splitter(self):
+        """spaCy-based linguistic splitting"""
+        return SpacyTextSplitter(
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap
+        )
+    
+    def _get_markdown_header_splitter(self):
+        """Markdown header-aware splitting"""
+        headers_to_split_on = [
+            ("#", "Header 1"),
+            ("##", "Header 2"),
+            ("###", "Header 3"),
+        ]
+        return MarkdownHeaderTextSplitter(
+            headers_to_split_on=headers_to_split_on
+        )
+    
+    def _get_markdown_splitter(self):
+        """General markdown splitting"""
+        return MarkdownTextSplitter(
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap
+        )
+    
+    def get_recommended_splitters(self):
+        """Get ordered list of recommended splitters for this file type"""
+        recommendations = {
+            '.txt': ["recursive", "character", "nltk", "token"],
+            '.md': ["markdown_header", "recursive", "markdown", "character"],
+            '.pdf': ["recursive", "nltk", "character", "token"],
+            '.docx': ["recursive", "nltk", "character", "token"],
+            '.doc': ["recursive", "nltk", "character", "token"],
+            '.ppt': ["recursive", "character", "token"],
+            '.pptx': ["recursive", "character", "token"],
+            '.csv': ["character", "recursive"],
+            '.xlsx': ["character", "recursive"],
+            '.xls': ["character", "recursive"]
+        }
+        
+        return recommendations.get(self.file.mimetype, ["recursive", "character", "token"])
 
 class VStoreHandler:
-    pass
+    def __init__(self, embedding_model):
+        self.vector_store = Chroma(
+            persist_directory=os.environ.get('VECTOR_DB_PERSISTENT_ABSOLUTE_PATH'),
+            collection_name=os.environ.get('COLLECTION_NAME'),
+            embedding_function=embedding_model
+        )
+    
+    def select(self):
+        return self.vector_store
 
 
 # Created By Amit Mahapatra
 ```
 
-**src/query/components.py**
-```python
-
-```
-
-**src/query/config.py**
-```python
-
-```
-
 **src/query/pipeline.py**
 ```python
 import os
-from abc import ABC, abstractmethod
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -338,7 +503,7 @@ embedding_model = HuggingFaceEmbeddings(
 db = Chroma(
     persist_directory=Path(os.environ.get('VECTOR_DB_PERSISTENT_ABSOLUTE_PATH')),
     embedding_function=embedding_model,
-    collection_name=os.environ.get('VECTOR_DB_NAME')
+    collection_name=os.environ.get('COLLECTION_NAME')
 )
 
 
@@ -395,10 +560,5 @@ def get_result_from_pipeline(query: str):
     return chain.invoke(query)
 
 # Created By Amit Mahapatra
-```
-
-**src/query/util.py**
-```python
-
 ```
 

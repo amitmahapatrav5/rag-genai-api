@@ -8,6 +8,7 @@
         "huggingface",
         "langchain",
         "Mahapatra",
+        "Multimodal",
         "pathlib",
         "Pydantic",
         "Vectorizer",

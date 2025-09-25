@@ -1,0 +1,99 @@
+Software Devlopment Engineer
+============================
+Skills:
+Programming Languages: Python, Javascript, C
+Programming Languages: Javascript, Python, C
+Frameworks and Libraries: Django, FastAPI, Flask
+Frameworks and Libraries: NodeJS, ExpressJS, ReactJS, NextJS, GraphQL
+Database and Cloud: PostgreSQL, AWS
+Fundamentals: Data Structures and Algorithms, System Design [https://www.linkedin.com/posts/amitmahapatrav5_im-happy-to-share-that-ive-obtained-a-new-activity-7165272184049913856-r9bF?utm_source=share&utm_medium=member_desktop]
+Pursuing: GoLang, BlockChain
+
+Industry Experience
+===================
+Database Migration:
+# Point# 1: Goal of the Project (n Lines)
+# Point# 2: Key Functionalities
+# Point# 3: Future Plans
+# Point# 4: Technologies Used
+
+Personal Experience
+===================
+Finance Tracker:
+# Point# 1: Goal of the Project
+	- Store all the "expenses I make everyday categrically", "all my income sources" and "investments" in a reliable and accessible format.
+		- I am storing all the data in a database. This way my data is safe and gurenteed that it will not be lost. Also, database storage gives me a programatic access to the data, so I can query it however I want.
+	- Visualize the past data of all the above 3 aspects in various parameter(e.g. time)
+		- "one picture tells a thousand words". Looking at the data in graphs and charts will provide me much more insight that only number cannot.
+	- Draw insights from the past data to help me take precise decisions in future.
+		- Example of this is, I can create a monthly budget and specify exactly **how much money, do I have to spend on my needs and howmuch money can I spend on my wants**. This will prevent me from impulsive purchases. Another example can be Category data can provide me insights like "Howmuch money am I investing on my health and how can I improve it. The reason this is important is because my health is my highest priority". Another example can be "Tracking Infletion and based on that I can take steps to increase my income and investments". Another example can be "Understanding my net value from my expense, income and investment data." There could be several other examples.
+# Point# 2: Key Functionalities
+	- "Automatic weekly Batch Migration" From Excel workbook to Database
+	- "Charts" - to visualize data
+	- "Monthly Budget" calculation (basically how much more money can I spend more in need and want)
+	- "Displaying the current Net Worth" Based on the data in all the 3 aspects
+# Point# 3: Future Plans
+	- "Inflation Indicator" - Building a product page which specify the "average cost of any already purchased product". 
+	- Building a "Future Wealth Monitor" which will display the approximate wealth built with current investment rate.
+	- "Impulsive Purchase Monitor"
+# Point# 4: Technologies Used
+	- Python, openpyxl, Django RESTAPI, Django ORM, PostgreSQL, JWT, ReactJS, D3js, Swagger, Postman, Git and Github, Heroku, LLM, (Code)[Github Repo Link], (Code)[Live Website Link]
+
+Habit Tracker
+=============
+# Point# 1: Goal of the Project
+	- Recording my day in terms of habits via forms in an excel and then migrating the data with additional meta information to the database.
+		- I am storing all the data in a database. This way my data is safe and gurenteed that it will not be lost. Also, database storage gives me a programatic access to the data, so I can query it however I want.	
+	- Visualize the past data of any particular habit.
+		- "one picture tells a thousand words". Looking at the data in graphs and charts will provide me much more insight that only number cannot.
+	- Draw insights from the past data to help me take precise decisions in future.
+		- Example of this can be like, "I have observed that the days when I wake up late, the acticities of the days do not go very well and even few actvities are skipped". This I can use to give myself more attention on how can I wake up early. Also I can plan my sleeep in a way that will remove some resistance from waking up early.
+# Point# 2: Key Functionalities
+	- "Automatic weekly Batch Migration" From Excel workbook to Database
+	- "Charts" - to visualize data
+	- "Streak Calculation" - This is a measure which tells howmany days I have performed the habit without missing it for 2 days continuously.
+# Point# 3: Future Plans
+	- "Reward Points Generator" - Like good habits, I will intrduce forms for my bad habits as well (like using netflix). For every good habit which I complete in the decided time, I will reward some points to myself and for every bad habit, I will loose some points. This will indicate howmany points have I gained everyday and then week, month, year and decade. This number will motimate me to work harder to make my day even more better and more productive.
+	- "Graph like we have in LeetCode" to track no of submissions Or GitHub to track commit. This is tricky, but really a value adder.
+	- Sentiment Evaluation
+# Point# 4: Technologies Used
+	- Python, openpyxl, Django RESTAPI, Django ORM, PostgreSQL, JWT, ReactJS, D3js, Swagger, Postman, Git and Github, Heroku, LLM, (Code)[Github Repo Link], (Code)[Live Website Link]
+
+
+
+
+
+- Microservice Architecture
+- Object Oriented Programming Paradigm
+- SOLID Principle
+- Test Driven Devlopment
+- Documentation (API and Project)
+- Authentication and Authorization (JWT, SSO etc)
+- API (REST, RPC, GraphQL etc)
+- ORM
+- Visualization
+- AI Integration and LLM Use
+- Deployment
+
+
+
+
+
+
+- Function Based Django REST API for Building Backend
+- PostgreSQL DB and Django ORM
+- Authentication using JWT token
+- ChartJS for Data Visualization
+- GraphQL API Design using ExpressJS
+- Automatic Batch Migration from Excel to DB every week
+- Backend Designed in microservice architecture using FastAPI Python Framework
+- SQLAlchemy ORM and PostgreSQL as DB
+- PostMan for API testing, Swagger API Documentation
+- ReactJS for building the frontend SPA application
+- D3.JS for data visualization
+- Both Backend and Frontend hosted in Heroku
+
+Future
+======
+AI, LLM, Prompt Engineering
+Content Creator

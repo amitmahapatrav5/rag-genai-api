@@ -8,9 +8,8 @@ app = FastAPI(debug=True)
 
 @app.post('/')
 async def ingest(file: UploadFile):
-    add_to_ingest_pipeline(object = file.file, name =file.filename, owner='test')
-    return {'success': True} 
-
+    return add_to_ingest_pipeline(object = file.file, name =file.filename, owner='test')
+    
 
 
 @app.delete('/')
@@ -20,4 +19,4 @@ async def remove(name: str):
 
 @app.get('/')
 async def query(query: str):
-    get_result_from_pipeline(query)
+    return get_result_from_pipeline(query)
